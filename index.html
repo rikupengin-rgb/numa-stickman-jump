@@ -141,8 +141,8 @@
 
         <div class="info-box">
           <div>🌱 イージーモードは爆弾なし！</div>
-          <div>⚠️ 💣爆弾の横には必ず「安全回避ルート」が出現</div>
-          <div>⚠️ 泥沼モードは50mごとにレベルアップ</div>
+          <div>⚠️ 💣爆弾の逃げ場なし！飛び越えろ！</div>
+          <div>⚠️ 足場配置が超ランダム理不尽仕様</div>
           <div class="controls-hint">👈 画面左タップ: 左2段ジャン / 画面右タップ: 右2段ジャン 👉</div>
         </div>
       </div>
@@ -256,59 +256,28 @@
       loop();
     }
 
-    // 足場生成アルゴリズム
+    // 足場生成アルゴリズム（超クソゲーランダム化）
     function spawnPlatform(yPos) {
-      let lastP = platforms[platforms.length - 1];
-      let pWidth = 65;
-      
+      // 足場の幅をランダムに変化（50px〜70px）
+      let pWidth = 50 + Math.random() * 20;
       let canBomb = (mode !== 'easy');
       let r = Math.random();
 
-      // 爆弾足場の生成（イージー以外）
-      if (canBomb && r < 0.22) {
-        let bombX = 15 + Math.random() * (canvas.width - pWidth - 30);
-        
-        platforms.push({
-          x: bombX,
-          y: yPos,
-          w: pWidth,
-          h: 12,
-          type: 'bomb',
-          vx: 0,
-          timer: 0,
-          broken: false
-        });
-
-        // 回避ルート生成
-        let safeX = (bombX > canvas.width / 2)
-          ? Math.max(10, bombX - 120 - Math.random() * 30)
-          : Math.min(canvas.width - pWidth - 10, bombX + 120 + Math.random() * 30);
-
-        platforms.push({
-          x: safeX,
-          y: yPos,
-          w: pWidth,
-          h: 12,
-          type: 'normal',
-          vx: 0,
-          timer: 0,
-          broken: false
-        });
-        return;
-      }
-
-      // 通常足場生成
-      let minX = Math.max(10, lastP.x - 110);
-      let maxX = Math.min(canvas.width - pWidth - 10, lastP.x + 110);
-      let px = minX + Math.random() * (maxX - minX);
+      // 完全ランダムなX座標配置（画面端から端まで自由に出現）
+      let px = 10 + Math.random() * (canvas.width - pWidth - 20);
 
       let type = 'normal';
-      let typeRand = Math.random();
 
-      if (typeRand < 0.40) type = 'normal';
-      else if (typeRand < 0.60) type = 'swamp';
-      else if (typeRand < 0.80) type = 'moving';
-      else type = 'vanish';
+      // 爆弾足場の生成（避難ルートなし！）
+      if (canBomb && r < 0.25) {
+        type = 'bomb';
+      } else {
+        let typeRand = Math.random();
+        if (typeRand < 0.30) type = 'normal';
+        else if (typeRand < 0.55) type = 'swamp';
+        else if (typeRand < 0.80) type = 'moving';
+        else type = 'vanish';
+      }
 
       platforms.push({
         x: px,
@@ -316,7 +285,8 @@
         w: pWidth,
         h: 12,
         type: type,
-        vx: type === 'moving' ? (Math.random() < 0.5 ? 2.5 : -2.5) : 0,
+        // 動く床の速度をランダム化（2.0〜4.5）
+        vx: type === 'moving' ? (Math.random() < 0.5 ? 1 : -1) * (2.0 + Math.random() * 2.5) : 0,
         timer: 0,
         broken: false
       });
@@ -372,9 +342,9 @@
       }
 
       // 金タライの発生
-      let taraiChance = (mode === 'hard') ? 0.012 : (mode === 'endless' ? 0.008 + (depth / 6000) : 0);
+      let taraiChance = (mode === 'hard') ? 0.015 : (mode === 'endless' ? 0.008 + (depth / 6000) : 0);
       if (Math.random() < taraiChance) {
-        basins.push({ x: Math.random() * (canvas.width - 30), y: -30, vy: 6.5 });
+        basins.push({ x: Math.random() * (canvas.width - 30), y: -30, vy: 7.0 });
       }
 
       // 足場との判定
@@ -391,9 +361,9 @@
             player.x + player.radius > p.x && player.x - player.radius < p.x + p.w &&
             player.y + player.radius >= p.y && player.y - player.radius < p.y + p.h + 2) {
 
-          // 💣 爆弾足場：中央判定
+          // 💣 爆弾足場：判定
           if (p.type === 'bomb') {
-            let bombMargin = 14;
+            let bombMargin = 12;
             if (player.x > p.x + bombMargin && player.x < p.x + p.w - bombMargin) {
               p.broken = true;
               playSound('bomb');
@@ -411,14 +381,13 @@
             player.vx = 0; // 着地時ピタッと停止
             player.jumpCount = 0; // 2段ジャンプリセット
 
-            // 動く床に乗っている間はキャラも一緒に移動
             if (p.type === 'moving') {
               player.x += p.vx;
             }
 
             if (p.type === 'vanish') {
               p.timer++;
-              if (p.timer > 8) p.broken = true;
+              if (p.timer > 5) p.broken = true; // 消える速度アップ
             }
           }
         }
