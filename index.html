@@ -133,9 +133,9 @@
         <div class="subtitle">〜 モードを選択してスタート 〜</div>
 
         <div class="menu-list">
-          <button class="btn btn-easy" onclick="startGame('easy')">🌱 イージー (500m/爆弾無)</button>
-          <button class="btn btn-normal" onclick="startGame('normal')">⚔️ ノーマル (700mクリア)</button>
-          <button class="btn btn-hard" onclick="startGame('hard')">🔥 ハード (1000m/タライ有)</button>
+          <button class="btn btn-easy" onclick="startGame('easy')">🌱 イージー (1000m/爆弾無)</button>
+          <button class="btn btn-normal" onclick="startGame('normal')">⚔️ ノーマル (1400mクリア)</button>
+          <button class="btn btn-hard" onclick="startGame('hard')">🔥 ハード (2000m/タライ有)</button>
           <button class="btn btn-endless" onclick="startGame('endless')">☣️ 終わりなき泥沼 (無限LvUp)</button>
         </div>
 
@@ -215,7 +215,7 @@
     let isPlaying = false;
     let animId = null;
     let mode = 'normal';
-    let targetDepth = 700;
+    let targetDepth = 1400;
     let depth = 0;
     let record = 0;
 
@@ -232,9 +232,9 @@
       if (animId) cancelAnimationFrame(animId);
 
       mode = selectedMode;
-      if (mode === 'easy') targetDepth = 500;
-      else if (mode === 'normal') targetDepth = 700;
-      else if (mode === 'hard') targetDepth = 1000;
+      if (mode === 'easy') targetDepth = 1000;
+      else if (mode === 'normal') targetDepth = 1400;
+      else if (mode === 'hard') targetDepth = 2000;
       else targetDepth = Infinity;
 
       depth = 0;
@@ -326,7 +326,7 @@
       if (!isPlaying) return;
       initAudio();
       if (player.jumpCount < player.maxJumps) {
-        player.vy = -11.5;
+        player.vy = -13.5;
         player.vx = dir * 6.0;
         if (player.jumpCount === 0) playSound('jump');
         else playSound('jump2');
@@ -371,7 +371,7 @@
         }
       }
 
-      // 金タライの発生（距離に合わせて頻度調整）
+      // 金タライの発生
       let taraiChance = (mode === 'hard') ? 0.012 : (mode === 'endless' ? 0.008 + (depth / 6000) : 0);
       if (Math.random() < taraiChance) {
         basins.push({ x: Math.random() * (canvas.width - 30), y: -30, vy: 6.5 });
@@ -391,12 +391,15 @@
             player.x + player.radius > p.x && player.x - player.radius < p.x + p.w &&
             player.y + player.radius >= p.y && player.y - player.radius < p.y + p.h + 2) {
 
-          // 💣 爆弾足場：即死判定
+          // 💣 爆弾足場：中央判定
           if (p.type === 'bomb') {
-            p.broken = true;
-            playSound('bomb');
-            gameOver("💣 爆弾を踏んで爆死！");
-            return;
+            let bombMargin = 14;
+            if (player.x > p.x + bombMargin && player.x < p.x + p.w - bombMargin) {
+              p.broken = true;
+              playSound('bomb');
+              gameOver("💣 爆弾を踏んで爆死！");
+              return;
+            }
           }
 
           if (p.type === 'swamp') {
