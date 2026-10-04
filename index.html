@@ -133,16 +133,16 @@
         <div class="subtitle">〜 モードを選択してスタート 〜</div>
 
         <div class="menu-list">
-          <button class="btn btn-easy" onclick="startGame('easy')">🌱 イージー (5000mクリア)</button>
-          <button class="btn btn-normal" onclick="startGame('normal')">⚔️ ノーマル (7000mクリア)</button>
-          <button class="btn btn-hard" onclick="startGame('hard')">🔥 ハード (10000m/タライ有)</button>
+          <button class="btn btn-easy" onclick="startGame('easy')">🌱 イージー (500m/爆弾無)</button>
+          <button class="btn btn-normal" onclick="startGame('normal')">⚔️ ノーマル (700mクリア)</button>
+          <button class="btn btn-hard" onclick="startGame('hard')">🔥 ハード (1000m/タライ有)</button>
           <button class="btn btn-endless" onclick="startGame('endless')">☣️ 終わりなき泥沼 (無限LvUp)</button>
         </div>
 
         <div class="info-box">
-          <div>⚠️ 泥沼モードは500mごとにレベルアップ</div>
-          <div>⚠️ 💣爆弾足場を踏むと即死！</div>
-          <div>⚠️ ハード/高Lv泥沼は上からの「金タライ」に注意！</div>
+          <div>🌱 イージーモードは爆弾なし！</div>
+          <div>⚠️ 💣爆弾の横には必ず「安全回避ルート」が出現</div>
+          <div>⚠️ 泥沼モードは50mごとにレベルアップ</div>
           <div class="controls-hint">👈 画面左タップ: 左2段ジャン / 画面右タップ: 右2段ジャン 👉</div>
         </div>
       </div>
@@ -215,7 +215,7 @@
     let isPlaying = false;
     let animId = null;
     let mode = 'normal';
-    let targetDepth = 7000;
+    let targetDepth = 700;
     let depth = 0;
     let record = 0;
 
@@ -232,9 +232,9 @@
       if (animId) cancelAnimationFrame(animId);
 
       mode = selectedMode;
-      if (mode === 'easy') targetDepth = 5000;
-      else if (mode === 'normal') targetDepth = 7000;
-      else if (mode === 'hard') targetDepth = 10000;
+      if (mode === 'easy') targetDepth = 500;
+      else if (mode === 'normal') targetDepth = 700;
+      else if (mode === 'hard') targetDepth = 1000;
       else targetDepth = Infinity;
 
       depth = 0;
@@ -256,20 +256,59 @@
       loop();
     }
 
+    // 足場生成アルゴリズム
     function spawnPlatform(yPos) {
       let lastP = platforms[platforms.length - 1];
-      let pWidth = 70;
-      let minX = Math.max(10, lastP.x - 120);
-      let maxX = Math.min(canvas.width - pWidth - 10, lastP.x + 120);
+      let pWidth = 65;
+      
+      let canBomb = (mode !== 'easy');
+      let r = Math.random();
+
+      // 爆弾足場の生成（イージー以外）
+      if (canBomb && r < 0.22) {
+        let bombX = 15 + Math.random() * (canvas.width - pWidth - 30);
+        
+        platforms.push({
+          x: bombX,
+          y: yPos,
+          w: pWidth,
+          h: 12,
+          type: 'bomb',
+          vx: 0,
+          timer: 0,
+          broken: false
+        });
+
+        // 回避ルート生成
+        let safeX = (bombX > canvas.width / 2)
+          ? Math.max(10, bombX - 120 - Math.random() * 30)
+          : Math.min(canvas.width - pWidth - 10, bombX + 120 + Math.random() * 30);
+
+        platforms.push({
+          x: safeX,
+          y: yPos,
+          w: pWidth,
+          h: 12,
+          type: 'normal',
+          vx: 0,
+          timer: 0,
+          broken: false
+        });
+        return;
+      }
+
+      // 通常足場生成
+      let minX = Math.max(10, lastP.x - 110);
+      let maxX = Math.min(canvas.width - pWidth - 10, lastP.x + 110);
       let px = minX + Math.random() * (maxX - minX);
 
-      let r = Math.random();
       let type = 'normal';
-      if (r < 0.35) type = 'normal';
-      else if (r < 0.50) type = 'swamp';
-      else if (r < 0.65) type = 'moving';
-      else if (r < 0.80) type = 'vanish';
-      else type = 'bomb';
+      let typeRand = Math.random();
+
+      if (typeRand < 0.40) type = 'normal';
+      else if (typeRand < 0.60) type = 'swamp';
+      else if (typeRand < 0.80) type = 'moving';
+      else type = 'vanish';
 
       platforms.push({
         x: px,
@@ -307,11 +346,11 @@
     function loop() {
       if (!isPlaying) return;
 
-      // 物理演算（滑りを抑えるため慣性減衰を強めに）
+      // 物理演算
       player.vy += 0.5; 
       player.x += player.vx;
       player.y += player.vy;
-      player.vx *= 0.82; // 空中・移動時の横滑りを強力にブレーキ
+      player.vx *= 0.82;
 
       // 壁判定
       if (player.x - player.radius < 0) { player.x = player.radius; player.vx = 0; }
@@ -332,8 +371,8 @@
         }
       }
 
-      // 金タライの発生
-      let taraiChance = (mode === 'hard') ? 0.012 : (mode === 'endless' ? 0.008 + (depth / 60000) : 0);
+      // 金タライの発生（距離に合わせて頻度調整）
+      let taraiChance = (mode === 'hard') ? 0.012 : (mode === 'endless' ? 0.008 + (depth / 6000) : 0);
       if (Math.random() < taraiChance) {
         basins.push({ x: Math.random() * (canvas.width - 30), y: -30, vy: 6.5 });
       }
@@ -348,9 +387,9 @@
         }
 
         // 着地判定
-        if (player.vy > 0 &&
+        if (player.vy >= 0 &&
             player.x + player.radius > p.x && player.x - player.radius < p.x + p.w &&
-            player.y + player.radius >= p.y && player.y - player.radius < p.y + p.h) {
+            player.y + player.radius >= p.y && player.y - player.radius < p.y + p.h + 2) {
 
           // 💣 爆弾足場：即死判定
           if (p.type === 'bomb') {
@@ -366,8 +405,13 @@
           } else {
             player.y = p.y - player.radius;
             player.vy = 0;
-            player.vx = 0; // ★着地時の滑りを即時ストップ
+            player.vx = 0; // 着地時ピタッと停止
             player.jumpCount = 0; // 2段ジャンプリセット
+
+            // 動く床に乗っている間はキャラも一緒に移動
+            if (p.type === 'moving') {
+              player.x += p.vx;
+            }
 
             if (p.type === 'vanish') {
               p.timer++;
@@ -425,31 +469,29 @@
       ctx.fillStyle = '#ffd700';
       basins.forEach(b => ctx.fillRect(b.x, b.y, 30, 14));
 
-      // ★ リアルな「棒人間」描画
+      // 棒人間描画
       ctx.strokeStyle = '#00ff66';
       ctx.lineWidth = 2.5;
       
-      // 頭（丸）
+      // 頭
       ctx.beginPath();
       ctx.arc(player.x, player.y - 14, 7, 0, Math.PI * 2);
       ctx.stroke();
 
-      // 胴体（縦線）
+      // 胴体
       ctx.beginPath();
       ctx.moveTo(player.x, player.y - 7);
       ctx.lineTo(player.x, player.y + 5);
       ctx.stroke();
 
-      // 腕（ジャンプ中はばんざいポーズ）
+      // 腕
       ctx.beginPath();
       if (player.vy < 0) {
-        // 上昇中（両手を上げる）
         ctx.moveTo(player.x, player.y - 2);
         ctx.lineTo(player.x - 9, player.y - 12);
         ctx.moveTo(player.x, player.y - 2);
         ctx.lineTo(player.x + 9, player.y - 12);
       } else {
-        // 通常・落下中
         ctx.moveTo(player.x, player.y - 2);
         ctx.lineTo(player.x - 8, player.y + 4);
         ctx.moveTo(player.x, player.y - 2);
@@ -457,7 +499,7 @@
       }
       ctx.stroke();
 
-      // 脚（左右2本）
+      // 脚
       ctx.beginPath();
       ctx.moveTo(player.x, player.y + 5);
       ctx.lineTo(player.x - 6, player.y + 16);
