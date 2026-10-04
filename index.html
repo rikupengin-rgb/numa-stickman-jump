@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>沼ゲーのクソゲー</title>
   <style>
     * {
@@ -13,146 +13,203 @@
       user-select: none;
       -webkit-user-select: none;
     }
-    body {
+    body, html {
+      width: 100%;
+      height: 100%;
       background-color: #050b05;
       color: #00ff66;
-      font-family: 'Courier New', Courier, monospace, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    #gameContainer {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      max-width: 480px;
+      max-height: 850px;
+      background: #000;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      min-height: 100vh;
       overflow: hidden;
-      padding: 10px;
     }
 
-    /* メインコンテナ：画面幅からはみ出ないように設定 */
-    .container {
+    canvas {
       width: 100%;
-      max-width: 400px;
+      height: 100%;
+      display: block;
+      background: #050b05;
+    }
+
+    /* スタート・モード選択画面オーバーレイ */
+    .overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(5, 11, 5, 0.92);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 12px;
+      z-index: 10;
+    }
+
+    /* スマホ画面内に絶対に収めるコンテナ */
+    .menu-card {
+      width: 92%;
+      max-width: 320px;
       text-align: center;
       display: flex;
       flex-direction: column;
       align-items: center;
     }
 
-    /* タイトルロゴ */
     h1 {
-      font-size: clamp(20px, 6vw, 28px);
+      font-size: clamp(16px, 5vw, 22px);
       color: #00ff66;
-      margin-bottom: 5px;
-      white-space: nowrap;
+      margin-bottom: 4px;
       text-shadow: 0 0 8px rgba(0, 255, 102, 0.6);
+      word-break: break-all;
     }
 
     .subtitle {
-      font-size: clamp(12px, 3.5vw, 14px);
+      font-size: clamp(10px, 3vw, 12px);
       color: #88cc88;
-      margin-bottom: 20px;
+      margin-bottom: 14px;
     }
 
-    /* モード選択ボタン一覧 */
     .menu-list {
       width: 100%;
       display: flex;
       flex-direction: column;
-      gap: 12px;
-      margin-bottom: 20px;
+      gap: 8px;
+      margin-bottom: 14px;
     }
 
-    /* ボタン共通スタイル：フォントサイズを自動伸縮 */
     .btn {
       width: 100%;
-      padding: 12px 8px;
-      font-size: clamp(12px, 3.8vw, 16px);
+      padding: 10px 4px;
+      font-size: clamp(11px, 3.2vw, 14px);
       font-weight: bold;
       border-radius: 8px;
-      background: rgba(0, 20, 0, 0.8);
+      background: rgba(0, 20, 0, 0.85);
       cursor: pointer;
-      transition: all 0.2s ease;
+      transition: transform 0.1s, opacity 0.1s;
       display: flex;
       align-items: center;
       justify-content: center;
-      word-break: break-all;
       text-align: center;
+      word-break: break-all;
     }
 
-    .btn-easy {
-      border: 2px solid #28a745;
-      color: #5cdb95;
-    }
-    .btn-normal {
-      border: 2px solid #007bff;
-      color: #64a6bd;
-    }
-    .btn-hard {
-      border: 2px solid #dc3545;
-      color: #ff6b6b;
-    }
-    .btn-endless {
-      border: 2px solid #6f42c1;
-      color: #d63384;
-    }
+    .btn-easy { border: 2px solid #28a745; color: #5cdb95; }
+    .btn-normal { border: 2px solid #007bff; color: #64a6bd; }
+    .btn-hard { border: 2px solid #dc3545; color: #ff6b6b; }
+    .btn-endless { border: 2px solid #6f42c1; color: #d63384; }
 
     .btn:active {
-      transform: scale(0.98);
+      transform: scale(0.96);
       opacity: 0.8;
     }
 
-    /* 注意書き・説明文 */
     .info-box {
       width: 100%;
-      font-size: clamp(10px, 3.2vw, 13px);
+      font-size: clamp(9px, 2.8vw, 11px);
       color: #ffcc00;
-      line-height: 1.6;
+      line-height: 1.4;
       text-align: left;
-      background: rgba(20, 20, 0, 0.5);
-      padding: 10px;
+      background: rgba(20, 20, 0, 0.6);
+      padding: 8px;
       border-radius: 6px;
       border: 1px solid #555000;
     }
 
     .info-item {
-      display: flex;
-      align-items: flex-start;
-      gap: 4px;
-      margin-bottom: 4px;
+      margin-bottom: 3px;
     }
 
     .controls-hint {
-      margin-top: 8px;
-      color: #888;
+      margin-top: 4px;
+      color: #aaa;
       text-align: center;
-      font-size: clamp(10px, 3vw, 12px);
+      font-size: clamp(9px, 2.6vw, 10px);
     }
   </style>
 </head>
 <body>
 
-  <div class="container">
-    <h1>☣️ 沼ゲーのクソゲー</h1>
-    <div class="subtitle">〜 モードを選択してスタート 〜</div>
+  <div id="gameContainer">
+    <canvas id="gameCanvas"></canvas>
 
-    <div class="menu-list">
-      <button class="btn btn-easy" onclick="startGame('easy')">🌱 イージー (5000mクリア)</button>
-      <button class="btn btn-normal" onclick="startGame('normal')">⚔️ ノーマル (7000mクリア)</button>
-      <button class="btn btn-hard" onclick="startGame('hard')">🔥 ハード (10000m/タライ有)</button>
-      <button class="btn btn-endless" onclick="startGame('endless')">☣️ 終わりなき泥沼 (無限LvUp)</button>
-    </div>
+    <!-- スタート画面 -->
+    <div id="menuOverlay" class="overlay">
+      <div class="menu-card">
+        <h1>☣️ 沼ゲーのクソゲー</h1>
+        <div class="subtitle">〜 モードを選択してスタート 〜</div>
 
-    <div class="info-box">
-      <div class="info-item">⚠️ 泥沼モードは500mごとにレベルアップ</div>
-      <div class="info-item">⚠️ ハード/高Lv泥沼は上からの「金タライ」に注意！</div>
-      <div class="controls-hint">👉 左タップ: 左ジャンプ / 👈 右タップ: 右ジャンプ</div>
+        <div class="menu-list">
+          <button class="btn btn-easy" onclick="startGame('easy')">🌱 イージー (5000mクリア)</button>
+          <button class="btn btn-normal" onclick="startGame('normal')">⚔️ ノーマル (7000mクリア)</button>
+          <button class="btn btn-hard" onclick="startGame('hard')">🔥 ハード (10000m/タライ有)</button>
+          <button class="btn btn-endless" onclick="startGame('endless')">☣️ 終わりなき泥沼 (無限LvUp)</button>
+        </div>
+
+        <div class="info-box">
+          <div class="info-item">⚠️ 泥沼モードは500mごとにレベルアップ</div>
+          <div class="info-item">⚠️ ハード/高Lv泥沼は上からの「金タライ」に注意！</div>
+          <div class="controls-hint">👉 左タップ: 左ジャン / 👈 右タップ: 右ジャン</div>
+        </div>
+      </div>
     </div>
   </div>
 
   <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const menuOverlay = document.getElementById('menuOverlay');
+
+    function resizeCanvas() {
+      canvas.width = canvas.parentElement.clientWidth;
+      canvas.height = canvas.parentElement.clientHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    let currentMode = 'normal';
+    let isPlaying = false;
+    let depth = 0;
+    let record = 0;
+
     function startGame(mode) {
-      alert(mode + " モードでスタートします！");
-      // ここにゲーム開始の処理が入ります
+      currentMode = mode;
+      isPlaying = true;
+      depth = 0;
+      menuOverlay.style.display = 'none';
+      gameLoop();
+    }
+
+    function gameLoop() {
+      if (!isPlaying) return;
+
+      // 描画更新
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      // UI情報描画
+      ctx.fillStyle = '#00ff66';
+      ctx.font = '14px monospace';
+      ctx.fillText(`DEPTH: ${depth}m`, 15, 25);
+      ctx.fillText(`RECORD: ${record}m`, 15, 45);
+
+      requestAnimationFrame(gameLoop);
     }
   </script>
-
 </body>
 </html>
