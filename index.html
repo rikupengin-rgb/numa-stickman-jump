@@ -134,13 +134,14 @@
 
         <div class="menu-list">
           <button class="btn btn-easy" onclick="startGame('easy')">🌱 イージー (5000mクリア)</button>
-          <button class="btn btn-normal" onclick="startGame('normal')">⚔️️ ノーマル (7000mクリア)</button>
+          <button class="btn btn-normal" onclick="startGame('normal')">⚔️ ノーマル (7000mクリア)</button>
           <button class="btn btn-hard" onclick="startGame('hard')">🔥 ハード (10000m/タライ有)</button>
           <button class="btn btn-endless" onclick="startGame('endless')">☣️ 終わりなき泥沼 (無限LvUp)</button>
         </div>
 
         <div class="info-box">
           <div>⚠️ 泥沼モードは500mごとにレベルアップ</div>
+          <div>⚠️ 💣爆弾足場を踏むと即死！</div>
           <div>⚠️ ハード/高Lv泥沼は上からの「金タライ」に注意！</div>
           <div class="controls-hint">👈 画面左タップ: 左2段ジャン / 画面右タップ: 右2段ジャン 👉</div>
         </div>
@@ -194,11 +195,11 @@
           osc.start(now); osc.stop(now + 0.12);
         } else if (type === 'bomb') {
           osc.type = 'sawtooth';
-          osc.frequency.setValueAtTime(140, now);
-          osc.frequency.linearRampToValueAtTime(20, now + 0.25);
-          gain.gain.setValueAtTime(0.4, now);
-          gain.gain.linearRampToValueAtTime(0, now + 0.25);
-          osc.start(now); osc.stop(now + 0.25);
+          osc.frequency.setValueAtTime(200, now);
+          osc.frequency.linearRampToValueAtTime(40, now + 0.4);
+          gain.gain.setValueAtTime(0.6, now);
+          gain.gain.linearRampToValueAtTime(0, now + 0.4);
+          osc.start(now); osc.stop(now + 0.4);
         } else if (type === 'tarai') {
           osc.type = 'square';
           osc.frequency.setValueAtTime(900, now);
@@ -246,7 +247,7 @@
       player.vy = 0;
       player.jumpCount = 0;
 
-      // 初期足場設定
+      // 初期足場
       platforms = [{ x: canvas.width / 2 - 40, y: canvas.height - 60, w: 80, h: 12, type: 'normal', vx: 0, timer: 0, broken: false }];
       for (let i = 1; i < 15; i++) {
         spawnPlatform(canvas.height - 60 - i * 75);
@@ -255,7 +256,6 @@
       loop();
     }
 
-    // 届く位置に足場を生成
     function spawnPlatform(yPos) {
       let lastP = platforms[platforms.length - 1];
       let pWidth = 70;
@@ -283,13 +283,12 @@
       });
     }
 
-    // ジャンプ操作（2段ジャンプ）
     function handleJump(dir) {
       if (!isPlaying) return;
       initAudio();
       if (player.jumpCount < player.maxJumps) {
         player.vy = -11.5;
-        player.vx = dir * 6.5; // しっかり届く横推進力
+        player.vx = dir * 6.0;
         if (player.jumpCount === 0) playSound('jump');
         else playSound('jump2');
         player.jumpCount++;
@@ -308,15 +307,15 @@
     function loop() {
       if (!isPlaying) return;
 
-      // 物理演算
-      player.vy += 0.48; // 重力
+      // 物理演算（滑りを抑えるため慣性減衰を強めに）
+      player.vy += 0.5; 
       player.x += player.vx;
       player.y += player.vy;
-      player.vx *= 0.96; // 空気抵抗
+      player.vx *= 0.82; // 空中・移動時の横滑りを強力にブレーキ
 
-      // 壁反射
-      if (player.x - player.radius < 0) { player.x = player.radius; player.vx *= -0.8; }
-      if (player.x + player.radius > canvas.width) { player.x = canvas.width - player.radius; player.vx *= -0.8; }
+      // 壁判定
+      if (player.x - player.radius < 0) { player.x = player.radius; player.vx = 0; }
+      if (player.x + player.radius > canvas.width) { player.x = canvas.width - player.radius; player.vx = 0; }
 
       // カメラ移動
       if (player.y < canvas.height * 0.45) {
@@ -348,22 +347,26 @@
           if (p.x < 5 || p.x + p.w > canvas.width - 5) p.vx *= -1;
         }
 
-        // 着地
+        // 着地判定
         if (player.vy > 0 &&
             player.x + player.radius > p.x && player.x - player.radius < p.x + p.w &&
             player.y + player.radius >= p.y && player.y - player.radius < p.y + p.h) {
 
+          // 💣 爆弾足場：即死判定
+          if (p.type === 'bomb') {
+            p.broken = true;
+            playSound('bomb');
+            gameOver("💣 爆弾を踏んで爆死！");
+            return;
+          }
+
           if (p.type === 'swamp') {
             player.vy = 1.0; // 沼：沈む
             player.jumpCount = 0;
-          } else if (p.type === 'bomb') {
-            p.broken = true;
-            playSound('bomb');
-            player.vy = -15; // 爆弾：大ジャンプ
-            player.jumpCount = 1;
           } else {
             player.y = p.y - player.radius;
             player.vy = 0;
+            player.vx = 0; // ★着地時の滑りを即時ストップ
             player.jumpCount = 0; // 2段ジャンプリセット
 
             if (p.type === 'vanish') {
@@ -397,7 +400,7 @@
         return;
       }
 
-      // 描画
+      // 描画処理
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
       // 足場描画
@@ -414,7 +417,7 @@
         if (p.type === 'bomb') {
           ctx.fillStyle = '#fff';
           ctx.font = '10px sans-serif';
-          ctx.fillText('💣', p.x + p.w/2 - 5, p.y + 10);
+          ctx.fillText('💣', p.x + p.w/2 - 6, p.y + 10);
         }
       });
 
@@ -422,21 +425,44 @@
       ctx.fillStyle = '#ffd700';
       basins.forEach(b => ctx.fillRect(b.x, b.y, 30, 14));
 
-      // 棒人間描画
+      // ★ リアルな「棒人間」描画
       ctx.strokeStyle = '#00ff66';
       ctx.lineWidth = 2.5;
+      
+      // 頭（丸）
       ctx.beginPath();
-      ctx.arc(player.x, player.y - 10, 6, 0, Math.PI * 2);
+      ctx.arc(player.x, player.y - 14, 7, 0, Math.PI * 2);
       ctx.stroke();
+
+      // 胴体（縦線）
       ctx.beginPath();
-      ctx.moveTo(player.x, player.y - 4);
-      ctx.lineTo(player.x, player.y + 6);
+      ctx.moveTo(player.x, player.y - 7);
+      ctx.lineTo(player.x, player.y + 5);
       ctx.stroke();
+
+      // 腕（ジャンプ中はばんざいポーズ）
       ctx.beginPath();
-      ctx.moveTo(player.x, player.y + 6);
-      ctx.lineTo(player.x - 4, player.y + 14);
-      ctx.moveTo(player.x, player.y + 6);
-      ctx.lineTo(player.x + 4, player.y + 14);
+      if (player.vy < 0) {
+        // 上昇中（両手を上げる）
+        ctx.moveTo(player.x, player.y - 2);
+        ctx.lineTo(player.x - 9, player.y - 12);
+        ctx.moveTo(player.x, player.y - 2);
+        ctx.lineTo(player.x + 9, player.y - 12);
+      } else {
+        // 通常・落下中
+        ctx.moveTo(player.x, player.y - 2);
+        ctx.lineTo(player.x - 8, player.y + 4);
+        ctx.moveTo(player.x, player.y - 2);
+        ctx.lineTo(player.x + 8, player.y + 4);
+      }
+      ctx.stroke();
+
+      // 脚（左右2本）
+      ctx.beginPath();
+      ctx.moveTo(player.x, player.y + 5);
+      ctx.lineTo(player.x - 6, player.y + 16);
+      ctx.moveTo(player.x, player.y + 5);
+      ctx.lineTo(player.x + 6, player.y + 16);
       ctx.stroke();
 
       // UI表示
