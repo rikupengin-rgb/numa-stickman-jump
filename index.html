@@ -18,7 +18,7 @@
       height: 100%;
       background-color: #050b05;
       color: #00ff66;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
       overflow: hidden;
       display: flex;
       justify-content: center;
@@ -31,11 +31,7 @@
       height: 100vh;
       max-width: 480px;
       max-height: 850px;
-      background: #000;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
+      background: #020802;
       overflow: hidden;
     }
 
@@ -43,17 +39,16 @@
       width: 100%;
       height: 100%;
       display: block;
-      background: #050b05;
     }
 
-    /* スタート・モード選択画面オーバーレイ */
+    /* メニュー画面オーバーレイ */
     .overlay {
       position: absolute;
       top: 0;
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(5, 11, 5, 0.92);
+      background: rgba(5, 11, 5, 0.94);
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -62,7 +57,6 @@
       z-index: 10;
     }
 
-    /* スマホ画面内に絶対に収めるコンテナ */
     .menu-card {
       width: 92%;
       max-width: 320px;
@@ -77,7 +71,6 @@
       color: #00ff66;
       margin-bottom: 4px;
       text-shadow: 0 0 8px rgba(0, 255, 102, 0.6);
-      word-break: break-all;
     }
 
     .subtitle {
@@ -102,12 +95,10 @@
       border-radius: 8px;
       background: rgba(0, 20, 0, 0.85);
       cursor: pointer;
-      transition: transform 0.1s, opacity 0.1s;
       display: flex;
       align-items: center;
       justify-content: center;
       text-align: center;
-      word-break: break-all;
     }
 
     .btn-easy { border: 2px solid #28a745; color: #5cdb95; }
@@ -115,10 +106,7 @@
     .btn-hard { border: 2px solid #dc3545; color: #ff6b6b; }
     .btn-endless { border: 2px solid #6f42c1; color: #d63384; }
 
-    .btn:active {
-      transform: scale(0.96);
-      opacity: 0.8;
-    }
+    .btn:active { transform: scale(0.96); opacity: 0.8; }
 
     .info-box {
       width: 100%;
@@ -132,16 +120,23 @@
       border: 1px solid #555000;
     }
 
-    .info-item {
-      margin-bottom: 3px;
-    }
-
     .controls-hint {
       margin-top: 4px;
       color: #aaa;
       text-align: center;
       font-size: clamp(9px, 2.6vw, 10px);
     }
+
+    /* タップ用透明操作エリア */
+    #touchLeft, #touchRight {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 50%;
+      z-index: 5;
+    }
+    #touchLeft { left: 0; }
+    #touchRight { right: 0; }
   </style>
 </head>
 <body>
@@ -149,7 +144,11 @@
   <div id="gameContainer">
     <canvas id="gameCanvas"></canvas>
 
-    <!-- スタート画面 -->
+    <!-- タップ判定エリア -->
+    <div id="touchLeft"></div>
+    <div id="touchRight"></div>
+
+    <!-- メニュー画面 -->
     <div id="menuOverlay" class="overlay">
       <div class="menu-card">
         <h1>☣️ 沼ゲーのクソゲー</h1>
@@ -163,9 +162,9 @@
         </div>
 
         <div class="info-box">
-          <div class="info-item">⚠️ 泥沼モードは500mごとにレベルアップ</div>
-          <div class="info-item">⚠️ ハード/高Lv泥沼は上からの「金タライ」に注意！</div>
-          <div class="controls-hint">👉 左タップ: 左ジャン / 👈 右タップ: 右ジャン</div>
+          <div>⚠️ 泥沼モードは500mごとにレベルアップ</div>
+          <div>⚠️ ハード/高Lv泥沼は上からの「金タライ」に注意！</div>
+          <div class="controls-hint">👈 画面左タップ: 左ジャンプ / 画面右タップ: 右ジャンプ 👉</div>
         </div>
       </div>
     </div>
@@ -176,39 +175,187 @@
     const ctx = canvas.getContext('2d');
     const menuOverlay = document.getElementById('menuOverlay');
 
-    function resizeCanvas() {
+    function resize() {
       canvas.width = canvas.parentElement.clientWidth;
       canvas.height = canvas.parentElement.clientHeight;
     }
-    window.addEventListener('resize', resizeCanvas);
-    resizeCanvas();
+    window.addEventListener('resize', resize);
+    resize();
 
-    let currentMode = 'normal';
+    // ゲーム変数
     let isPlaying = false;
+    let mode = 'normal';
+    let targetDepth = 7000;
     let depth = 0;
     let record = 0;
 
-    function startGame(mode) {
-      currentMode = mode;
-      isPlaying = true;
+    let player = { x: 0, y: 0, vx: 0, vy: 0, radius: 12, onGround: false };
+    let platforms = [];
+    let basins = [];
+    let cameraY = 0;
+
+    function startGame(selectedMode) {
+      mode = selectedMode;
+      if (mode === 'easy') targetDepth = 5000;
+      else if (mode === 'normal') targetDepth = 7000;
+      else if (mode === 'hard') targetDepth = 10000;
+      else targetDepth = Infinity;
+
       depth = 0;
+      isPlaying = true;
       menuOverlay.style.display = 'none';
-      gameLoop();
+
+      // プレイヤー初期化
+      player.x = canvas.width / 2;
+      player.y = canvas.height - 100;
+      player.vx = 0;
+      player.vy = 0;
+
+      // 足場生成
+      platforms = [{ x: canvas.width / 2 - 40, y: canvas.height - 60, w: 80, h: 12 }];
+      for (let i = 1; i < 20; i++) {
+        platforms.push({
+          x: Math.random() * (canvas.width - 70),
+          y: canvas.height - 60 - i * 80,
+          w: 70,
+          h: 12
+        });
+      }
+      basins = [];
+      loop();
     }
 
-    function gameLoop() {
+    // タップ操作
+    document.getElementById('touchLeft').addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      if (isPlaying && player.onGround) {
+        player.vy = -12;
+        player.vx = -5;
+        player.onGround = false;
+      }
+    });
+
+    document.getElementById('touchRight').addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      if (isPlaying && player.onGround) {
+        player.vy = -12;
+        player.vx = 5;
+        player.onGround = false;
+      }
+    });
+
+    function loop() {
       if (!isPlaying) return;
 
-      // 描画更新
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      
-      // UI情報描画
-      ctx.fillStyle = '#00ff66';
-      ctx.font = '14px monospace';
-      ctx.fillText(`DEPTH: ${depth}m`, 15, 25);
-      ctx.fillText(`RECORD: ${record}m`, 15, 45);
+      // 物理計算
+      player.vy += 0.5; // 重力
+      player.x += player.vx;
+      player.y += player.vy;
+      player.vx *= 0.95;
 
-      requestAnimationFrame(gameLoop);
+      // 壁反射
+      if (player.x < 10) { player.x = 10; player.vx *= -1; }
+      if (player.x > canvas.width - 10) { player.x = canvas.width - 10; player.vx *= -1; }
+
+      // カメラ＆深度移動
+      if (player.y < canvas.height / 2) {
+        let diff = canvas.height / 2 - player.y;
+        player.y = canvas.height / 2;
+        depth += Math.floor(diff);
+        if (depth > record) record = depth;
+
+        // 足場を下にスライド
+        platforms.forEach(p => p.y += diff);
+        basins.forEach(b => b.y += diff);
+
+        // 新しい足場追加
+        while (platforms[platforms.length - 1].y > 0) {
+          platforms.push({
+            x: Math.random() * (canvas.width - 70),
+            y: platforms[platforms.length - 1].y - 80,
+            w: 70,
+            h: 12
+          });
+        }
+      }
+
+      // 金タライの発生（ハード・泥沼モード）
+      if ((mode === 'hard' || mode === 'endless') && Math.random() < 0.02) {
+        basins.push({ x: Math.random() * (canvas.width - 30), y: -30, vy: 6 });
+      }
+
+      // 足場との当たり判定
+      player.onGround = false;
+      platforms.forEach(p => {
+        if (player.vy > 0 &&
+            player.x > p.x && player.x < p.x + p.w &&
+            player.y + player.radius >= p.y && player.y - player.radius < p.y) {
+          player.y = p.y - player.radius;
+          player.vy = 0;
+          player.vx = 0;
+          player.onGround = true;
+        }
+      });
+
+      // タライ落下・判定
+      basins.forEach(b => {
+        b.y += b.vy;
+        // プレイヤー直撃判定
+        if (Math.abs(player.x - (b.x + 15)) < 20 && Math.abs(player.y - (b.y + 10)) < 20) {
+          gameOver("金タライ直撃！");
+        }
+      });
+
+      // 画面外落下判定
+      if (player.y > canvas.height + 50) {
+        gameOver("沼に落ちた！");
+      }
+
+      // クリア判定
+      if (depth >= targetDepth) {
+        alert("🎉 クリア達成！深さ: " + depth + "m");
+        menuOverlay.style.display = 'flex';
+        isPlaying = false;
+        return;
+      }
+
+      // 描画
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // 足場描画
+      ctx.fillStyle = '#28a745';
+      platforms.forEach(p => ctx.fillRect(p.x, p.y, p.w, p.h));
+
+      // 金タライ描画
+      ctx.fillStyle = '#ffd700';
+      basins.forEach(b => ctx.fillRect(b.x, b.y, 30, 15));
+
+      // 棒人間描画
+      ctx.strokeStyle = '#00ff66';
+      ctx.lineWidth = 3;
+      // 頭
+      ctx.beginPath();
+      ctx.arc(player.x, player.y - 12, 6, 0, Math.PI * 2);
+      ctx.stroke();
+      // 胴体
+      ctx.beginPath();
+      ctx.moveTo(player.x, player.y - 6);
+      ctx.lineTo(player.x, player.y + 6);
+      ctx.stroke();
+
+      // UI
+      ctx.fillStyle = '#00ff66';
+      ctx.font = 'bold 14px monospace';
+      ctx.fillText(`DEPTH: ${depth}m`, 15, 30);
+      ctx.fillText(`TARGET: ${targetDepth === Infinity ? '無限' : targetDepth + 'm'}`, 15, 50);
+
+      requestAnimationFrame(loop);
+    }
+
+    function gameOver(reason) {
+      isPlaying = false;
+      alert(`GAME OVER (${reason})\n到達: ${depth}m`);
+      menuOverlay.style.display = 'flex';
     }
   </script>
 </body>
