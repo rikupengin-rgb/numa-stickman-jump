@@ -6,80 +6,67 @@
   <title>沼ゲーのクソゲー</title>
   <style>
     * {
-      box-sizing: border-box;
+      box-sizing: border-box !important;
       margin: 0;
       padding: 0;
       touch-action: manipulation;
       user-select: none;
       -webkit-user-select: none;
     }
-    body, html {
+    html, body {
       width: 100%;
       height: 100%;
       background-color: #050b05;
       color: #00ff66;
-      font-family: -apple-system, BlinkMacSystemFont, "Courier New", monospace;
+      font-family: -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN", sans-serif;
       overflow: hidden;
-      display: flex;
-      justify-content: center;
-      align-items: center;
+      position: fixed;
     }
-
     #gameContainer {
       position: relative;
       width: 100vw;
       height: 100vh;
       max-width: 480px;
-      max-height: 850px;
+      margin: 0 auto;
       background: #020802;
       overflow: hidden;
     }
-
     canvas {
       width: 100%;
       height: 100%;
       display: block;
     }
-
-    /* オーバーレイUI（画面崩れ対策済み） */
     .overlay {
       position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(5, 11, 5, 0.94);
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(5, 11, 5, 0.95);
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       padding: 12px;
-      z-index: 10;
+      z-index: 20;
     }
-
     .menu-card {
       width: 100%;
       max-width: 320px;
-      text-align: center;
       display: flex;
       flex-direction: column;
       align-items: center;
+      text-align: center;
     }
-
     h1 {
-      font-size: clamp(16px, 5.5vw, 22px);
+      font-size: min(5.5vw, 22px);
       color: #00ff66;
       margin-bottom: 4px;
       text-shadow: 0 0 8px rgba(0, 255, 102, 0.6);
-      word-break: break-all;
     }
-
     .subtitle {
-      font-size: clamp(10px, 3.2vw, 12px);
+      font-size: min(3.2vw, 12px);
       color: #88cc88;
       margin-bottom: 12px;
     }
-
     .menu-list {
       width: 100%;
       display: flex;
@@ -87,55 +74,46 @@
       gap: 8px;
       margin-bottom: 12px;
     }
-
     .btn {
       width: 100%;
-      padding: 10px 4px;
-      font-size: clamp(11px, 3.2vw, 13px);
+      padding: 10px 6px;
+      font-size: min(3.5vw, 13px);
       font-weight: bold;
-      border-radius: 8px;
-      background: rgba(0, 20, 0, 0.85);
+      border-radius: 6px;
+      background: rgba(0, 25, 0, 0.9);
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
       text-align: center;
-      word-break: break-all;
     }
-
     .btn-easy { border: 2px solid #28a745; color: #5cdb95; }
     .btn-normal { border: 2px solid #007bff; color: #64a6bd; }
     .btn-hard { border: 2px solid #dc3545; color: #ff6b6b; }
     .btn-endless { border: 2px solid #6f42c1; color: #d63384; }
-
-    .btn:active { transform: scale(0.96); opacity: 0.8; }
-
+    .btn:active { transform: scale(0.97); opacity: 0.8; }
     .info-box {
       width: 100%;
-      font-size: clamp(9px, 2.8vw, 11px);
+      font-size: min(2.8vw, 11px);
       color: #ffcc00;
       line-height: 1.4;
       text-align: left;
-      background: rgba(20, 20, 0, 0.6);
+      background: rgba(20, 20, 0, 0.7);
       padding: 8px;
       border-radius: 6px;
       border: 1px solid #555000;
     }
-
     .controls-hint {
       margin-top: 4px;
       color: #aaa;
       text-align: center;
-      font-size: clamp(9px, 2.6vw, 10px);
+      font-size: min(2.6vw, 10px);
     }
-
-    /* タップエリア */
     #touchLeft, #touchRight {
       position: absolute;
-      top: 0;
-      bottom: 0;
+      top: 0; bottom: 0;
       width: 50%;
-      z-index: 5;
+      z-index: 10;
     }
     #touchLeft { left: 0; }
     #touchRight { right: 0; }
@@ -146,11 +124,9 @@
   <div id="gameContainer">
     <canvas id="gameCanvas"></canvas>
 
-    <!-- タップ操作エリア -->
     <div id="touchLeft"></div>
     <div id="touchRight"></div>
 
-    <!-- スタート＆モード選択画面 -->
     <div id="menuOverlay" class="overlay">
       <div class="menu-card">
         <h1>☣️ 沼ゲーのクソゲー</h1>
@@ -158,7 +134,7 @@
 
         <div class="menu-list">
           <button class="btn btn-easy" onclick="startGame('easy')">🌱 イージー (5000mクリア)</button>
-          <button class="btn btn-normal" onclick="startGame('normal')">⚔️ ノーマル (7000mクリア)</button>
+          <button class="btn btn-normal" onclick="startGame('normal')">⚔️️ ノーマル (7000mクリア)</button>
           <button class="btn btn-hard" onclick="startGame('hard')">🔥 ハード (10000m/タライ有)</button>
           <button class="btn btn-endless" onclick="startGame('endless')">☣️ 終わりなき泥沼 (無限LvUp)</button>
         </div>
@@ -166,7 +142,7 @@
         <div class="info-box">
           <div>⚠️ 泥沼モードは500mごとにレベルアップ</div>
           <div>⚠️ ハード/高Lv泥沼は上からの「金タライ」に注意！</div>
-          <div class="controls-hint">👈 画面左: 左2段ジャン / 画面右: 右2段ジャン 👉</div>
+          <div class="controls-hint">👈 画面左タップ: 左2段ジャン / 画面右タップ: 右2段ジャン 👉</div>
         </div>
       </div>
     </div>
@@ -184,67 +160,76 @@
     window.addEventListener('resize', resize);
     resize();
 
-    // --- Web Audio API 効果音合成 ---
+    // --- Web Audio API (効果音) ---
     let audioCtx = null;
     function initAudio() {
-      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
     }
+
     function playSound(type) {
       if (!audioCtx) return;
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-      const now = audioCtx.currentTime;
+      try {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        const now = audioCtx.currentTime;
 
-      if (type === 'jump') {
-        osc.frequency.setValueAtTime(150, now);
-        osc.frequency.exponentialRampToValueAtTime(400, now + 0.15);
-        gain.gain.setValueAtTime(0.3, now);
-        gain.gain.linearRampToValueAtTime(0, now + 0.15);
-        osc.start(now); osc.stop(now + 0.15);
-      } else if (type === 'jump2') {
-        osc.frequency.setValueAtTime(300, now);
-        osc.frequency.exponentialRampToValueAtTime(650, now + 0.15);
-        gain.gain.setValueAtTime(0.3, now);
-        gain.gain.linearRampToValueAtTime(0, now + 0.15);
-        osc.start(now); osc.stop(now + 0.15);
-      } else if (type === 'bomb') {
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(120, now);
-        osc.frequency.linearRampToValueAtTime(30, now + 0.3);
-        gain.gain.setValueAtTime(0.5, now);
-        gain.gain.linearRampToValueAtTime(0, now + 0.3);
-        osc.start(now); osc.stop(now + 0.3);
-      } else if (type === 'tarai') {
-        osc.type = 'square';
-        osc.frequency.setValueAtTime(800, now);
-        osc.frequency.linearRampToValueAtTime(200, now + 0.2);
-        gain.gain.setValueAtTime(0.6, now);
-        gain.gain.linearRampToValueAtTime(0, now + 0.2);
-        osc.start(now); osc.stop(now + 0.2);
-      }
+        if (type === 'jump') {
+          osc.frequency.setValueAtTime(160, now);
+          osc.frequency.exponentialRampToValueAtTime(450, now + 0.12);
+          gain.gain.setValueAtTime(0.2, now);
+          gain.gain.linearRampToValueAtTime(0, now + 0.12);
+          osc.start(now); osc.stop(now + 0.12);
+        } else if (type === 'jump2') {
+          osc.frequency.setValueAtTime(320, now);
+          osc.frequency.exponentialRampToValueAtTime(700, now + 0.12);
+          gain.gain.setValueAtTime(0.25, now);
+          gain.gain.linearRampToValueAtTime(0, now + 0.12);
+          osc.start(now); osc.stop(now + 0.12);
+        } else if (type === 'bomb') {
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(140, now);
+          osc.frequency.linearRampToValueAtTime(20, now + 0.25);
+          gain.gain.setValueAtTime(0.4, now);
+          gain.gain.linearRampToValueAtTime(0, now + 0.25);
+          osc.start(now); osc.stop(now + 0.25);
+        } else if (type === 'tarai') {
+          osc.type = 'square';
+          osc.frequency.setValueAtTime(900, now);
+          osc.frequency.linearRampToValueAtTime(150, now + 0.2);
+          gain.gain.setValueAtTime(0.5, now);
+          gain.gain.linearRampToValueAtTime(0, now + 0.2);
+          osc.start(now); osc.stop(now + 0.2);
+        }
+      } catch(e){}
     }
 
     // --- ゲーム状態変数 ---
     let isPlaying = false;
+    let animId = null;
     let mode = 'normal';
     let targetDepth = 7000;
     let depth = 0;
     let record = 0;
 
-    // プレイヤー（2段ジャンプ機能）
     let player = {
       x: 0, y: 0, vx: 0, vy: 0, radius: 10,
-      jumpCount: 0, maxJumps: 2, onGround: false
+      jumpCount: 0, maxJumps: 2
     };
 
     let platforms = [];
     let basins = [];
 
-    // ゲーム開始
     function startGame(selectedMode) {
       initAudio();
+      if (animId) cancelAnimationFrame(animId);
+
       mode = selectedMode;
       if (mode === 'easy') targetDepth = 5000;
       else if (mode === 'normal') targetDepth = 7000;
@@ -256,74 +241,84 @@
       menuOverlay.style.display = 'none';
 
       player.x = canvas.width / 2;
-      player.y = canvas.height - 100;
+      player.y = canvas.height - 120;
       player.vx = 0;
       player.vy = 0;
       player.jumpCount = 0;
 
-      // 足場生成（初期足場）
-      platforms = [{ x: canvas.width / 2 - 40, y: canvas.height - 50, w: 80, h: 12, type: 'normal' }];
+      // 初期足場設定
+      platforms = [{ x: canvas.width / 2 - 40, y: canvas.height - 60, w: 80, h: 12, type: 'normal', vx: 0, timer: 0, broken: false }];
       for (let i = 1; i < 15; i++) {
-        spawnPlatform(canvas.height - 50 - i * 75);
+        spawnPlatform(canvas.height - 60 - i * 75);
       }
       basins = [];
       loop();
     }
 
-    // 足場のランダム生成（通常・沼・移動・消える・爆弾）
+    // 届く位置に足場を生成
     function spawnPlatform(yPos) {
-      const types = ['normal', 'swamp', 'moving', 'vanish', 'bomb'];
+      let lastP = platforms[platforms.length - 1];
+      let pWidth = 70;
+      let minX = Math.max(10, lastP.x - 120);
+      let maxX = Math.min(canvas.width - pWidth - 10, lastP.x + 120);
+      let px = minX + Math.random() * (maxX - minX);
+
       let r = Math.random();
       let type = 'normal';
-      if (r < 0.4) type = 'normal';
-      else if (r < 0.55) type = 'swamp';
-      else if (r < 0.7) type = 'moving';
-      else if (r < 0.85) type = 'vanish';
+      if (r < 0.35) type = 'normal';
+      else if (r < 0.50) type = 'swamp';
+      else if (r < 0.65) type = 'moving';
+      else if (r < 0.80) type = 'vanish';
       else type = 'bomb';
 
       platforms.push({
-        x: Math.random() * (canvas.width - 70),
+        x: px,
         y: yPos,
-        w: 70,
+        w: pWidth,
         h: 12,
         type: type,
-        vx: type === 'moving' ? (Math.random() < 0.5 ? 2 : -2) : 0,
+        vx: type === 'moving' ? (Math.random() < 0.5 ? 2.5 : -2.5) : 0,
         timer: 0,
         broken: false
       });
     }
 
-    // 操作処理（2段ジャンプ対応）
+    // ジャンプ操作（2段ジャンプ）
     function handleJump(dir) {
       if (!isPlaying) return;
+      initAudio();
       if (player.jumpCount < player.maxJumps) {
-        player.vy = -11;
-        player.vx = dir * 4.5;
+        player.vy = -11.5;
+        player.vx = dir * 6.5; // しっかり届く横推進力
         if (player.jumpCount === 0) playSound('jump');
         else playSound('jump2');
         player.jumpCount++;
-        player.onGround = false;
       }
     }
 
-    document.getElementById('touchLeft').addEventListener('touchstart', (e) => { e.preventDefault(); handleJump(-1); });
-    document.getElementById('touchRight').addEventListener('touchstart', (e) => { e.preventDefault(); handleJump(1); });
+    const touchL = document.getElementById('touchLeft');
+    const touchR = document.getElementById('touchRight');
 
-    // ゲームメインループ
+    touchL.addEventListener('touchstart', (e) => { e.preventDefault(); handleJump(-1); }, {passive: false});
+    touchR.addEventListener('touchstart', (e) => { e.preventDefault(); handleJump(1); }, {passive: false});
+    touchL.addEventListener('mousedown', () => handleJump(-1));
+    touchR.addEventListener('mousedown', () => handleJump(1));
+
+    // メインゲームループ
     function loop() {
       if (!isPlaying) return;
 
-      // 物理処理
-      player.vy += 0.45; // 重力
+      // 物理演算
+      player.vy += 0.48; // 重力
       player.x += player.vx;
       player.y += player.vy;
-      player.vx *= 0.94;
+      player.vx *= 0.96; // 空気抵抗
 
-      // 画面端の壁反転
-      if (player.x < 10) { player.x = 10; player.vx *= -1; }
-      if (player.x > canvas.width - 10) { player.x = canvas.width - 10; player.vx *= -1; }
+      // 壁反射
+      if (player.x - player.radius < 0) { player.x = player.radius; player.vx *= -0.8; }
+      if (player.x + player.radius > canvas.width) { player.x = canvas.width - player.radius; player.vx *= -0.8; }
 
-      // カメラ追従・スクロール
+      // カメラ移動
       if (player.y < canvas.height * 0.45) {
         let diff = canvas.height * 0.45 - player.y;
         player.y = canvas.height * 0.45;
@@ -338,48 +333,48 @@
         }
       }
 
-      // 金タライ降下（ハード / 泥沼モード）
-      let taraiChance = (mode === 'hard') ? 0.015 : (mode === 'endless' ? 0.01 + (depth / 50000) : 0);
+      // 金タライの発生
+      let taraiChance = (mode === 'hard') ? 0.012 : (mode === 'endless' ? 0.008 + (depth / 60000) : 0);
       if (Math.random() < taraiChance) {
-        basins.push({ x: Math.random() * (canvas.width - 30), y: -30, vy: 7 });
+        basins.push({ x: Math.random() * (canvas.width - 30), y: -30, vy: 6.5 });
       }
 
-      // 足場更新＆当たり判定
-      player.onGround = false;
+      // 足場との判定
       platforms.forEach(p => {
         if (p.broken) return;
 
-        // 移動足場
         if (p.type === 'moving') {
           p.x += p.vx;
-          if (p.x < 0 || p.x + p.w > canvas.width) p.vx *= -1;
+          if (p.x < 5 || p.x + p.w > canvas.width - 5) p.vx *= -1;
         }
 
-        // 着地判定
+        // 着地
         if (player.vy > 0 &&
-            player.x > p.x - 5 && player.x < p.x + p.w + 5 &&
-            player.y + player.radius >= p.y && player.y - player.radius < p.y + 6) {
-          
-          player.y = p.y - player.radius;
-          player.vy = 0;
-          player.jumpCount = 0; // 2段ジャンプリセット
-          player.onGround = true;
+            player.x + player.radius > p.x && player.x - player.radius < p.x + p.w &&
+            player.y + player.radius >= p.y && player.y - player.radius < p.y + p.h) {
 
-          // 特殊足場の効果
           if (p.type === 'swamp') {
-            player.vy = 1.2; // 沼：じわじわ沈む
-          } else if (p.type === 'vanish') {
-            p.timer++;
-            if (p.timer > 15) p.broken = true; // 消える足場
+            player.vy = 1.0; // 沼：沈む
+            player.jumpCount = 0;
           } else if (p.type === 'bomb') {
             p.broken = true;
             playSound('bomb');
-            player.vy = -14; // 爆弾：大ジャンプで弾け飛ぶ
+            player.vy = -15; // 爆弾：大ジャンプ
+            player.jumpCount = 1;
+          } else {
+            player.y = p.y - player.radius;
+            player.vy = 0;
+            player.jumpCount = 0; // 2段ジャンプリセット
+
+            if (p.type === 'vanish') {
+              p.timer++;
+              if (p.timer > 8) p.broken = true;
+            }
           }
         }
       });
 
-      // タライ判定
+      // 金タライ判定
       basins.forEach(b => {
         b.y += b.vy;
         if (Math.abs(player.x - (b.x + 15)) < 18 && Math.abs(player.y - (b.y + 10)) < 18) {
@@ -391,9 +386,10 @@
       // 落下ゲームオーバー
       if (player.y > canvas.height + 40) {
         gameOver("沼の底に沈んだ...");
+        return;
       }
 
-      // クリア判定
+      // クリアチェック
       if (depth >= targetDepth) {
         alert("🎉 クリア達成！ 到達度: " + depth + "m");
         menuOverlay.style.display = 'flex';
@@ -401,10 +397,10 @@
         return;
       }
 
-      // 描画処理
+      // 描画
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // 足場の描画
+      // 足場描画
       platforms.forEach(p => {
         if (p.broken) return;
         if (p.type === 'normal') ctx.fillStyle = '#28a745';
@@ -412,33 +408,44 @@
         else if (p.type === 'moving') ctx.fillStyle = '#17a2b8';
         else if (p.type === 'vanish') ctx.fillStyle = '#ffc107';
         else if (p.type === 'bomb') ctx.fillStyle = '#dc3545';
+        
         ctx.fillRect(p.x, p.y, p.w, p.h);
+
+        if (p.type === 'bomb') {
+          ctx.fillStyle = '#fff';
+          ctx.font = '10px sans-serif';
+          ctx.fillText('💣', p.x + p.w/2 - 5, p.y + 10);
+        }
       });
 
-      // 金タライの描画
+      // タライ描画
       ctx.fillStyle = '#ffd700';
       basins.forEach(b => ctx.fillRect(b.x, b.y, 30, 14));
 
-      // 棒人間の描画
+      // 棒人間描画
       ctx.strokeStyle = '#00ff66';
       ctx.lineWidth = 2.5;
-      // 頭
       ctx.beginPath();
       ctx.arc(player.x, player.y - 10, 6, 0, Math.PI * 2);
       ctx.stroke();
-      // 胴体
       ctx.beginPath();
       ctx.moveTo(player.x, player.y - 4);
       ctx.lineTo(player.x, player.y + 6);
       ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(player.x, player.y + 6);
+      ctx.lineTo(player.x - 4, player.y + 14);
+      ctx.moveTo(player.x, player.y + 6);
+      ctx.lineTo(player.x + 4, player.y + 14);
+      ctx.stroke();
 
-      // UI描画
+      // UI表示
       ctx.fillStyle = '#00ff66';
       ctx.font = 'bold 13px monospace';
       ctx.fillText(`DEPTH: ${depth}m`, 12, 25);
       ctx.fillText(`TARGET: ${targetDepth === Infinity ? '無限' : targetDepth + 'm'}`, 12, 42);
 
-      requestAnimationFrame(loop);
+      animId = requestAnimationFrame(loop);
     }
 
     function gameOver(reason) {
