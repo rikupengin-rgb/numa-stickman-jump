@@ -7,13 +7,13 @@
   <!-- PWA・全画面表示用の設定 -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="沼！棒人間">
+  <meta name="apple-mobile-web-app-title" content="沼ゲーのクソゲー">
   <meta name="mobile-web-app-capable" content="yes">
 
   <!-- ホーム画面アイコン -->
   <link rel="apple-touch-icon" href="https://api.iconify.design/emojione-v1:biohazard-symbol.svg">
 
-  <title>沼！棒人間ジャンプ</title>
+  <title>沼ゲーのクソゲー</title>
   <style>
     * { touch-action: manipulation; -webkit-user-select: none; user-select: none; box-sizing: border-box; }
     html, body {
@@ -52,9 +52,26 @@
     canvas.height = H;
 
     let state = 'TITLE';
+    let currentModeKey = 'NORMAL';
+    let currentLevel = 1;
     let player, cameraY, score, highScore = 0;
     let platforms = [], obstacles = [], particles = [], popups = [], jumpEffects = [];
     let shakeTime = 0;
+
+    // モード設定
+    const MODES = {
+      EASY:    { name: '🌱 イージー (5000mクリア)', target: 5000, swampProb: 0.15, bombProb: 0, minW: 100, maxW: 140, color: '#4CAF50', tarai: false },
+      NORMAL:  { name: '⚔️️ ノーマル (7000mクリア)', target: 7000, swampProb: 0.25, bombProb: 0.10, minW: 80, maxW: 115, color: '#2196F3', tarai: false },
+      HARD:    { name: '🔥 ハード (10000m/タライ有)', target: 10000, swampProb: 0.35, bombProb: 0.18, minW: 65, maxW: 90, color: '#F44336', tarai: true },
+      ENDLESS: { name: '☣️ 終わりなき泥沼 (無限LvUP)', target: Infinity, swampProb: 0.20, bombProb: 0.08, minW: 85, maxW: 120, color: '#9C27B0', tarai: false }
+    };
+
+    const modeButtons = [
+      { key: 'EASY', y: 230 },
+      { key: 'NORMAL', y: 300 },
+      { key: 'HARD', y: 370 },
+      { key: 'ENDLESS', y: 440 }
+    ];
 
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     function playSound(type) {
@@ -85,11 +102,22 @@
           gain.gain.setValueAtTime(0.3, now);
           gain.gain.linearRampToValueAtTime(0.01, now + 0.25);
           osc.start(now); osc.stop(now + 0.25);
+        } else if (type === 'clear' || type === 'levelup') {
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(523.25, now);
+          osc.frequency.setValueAtTime(659.25, now + 0.08);
+          osc.frequency.setValueAtTime(783.99, now + 0.16);
+          osc.frequency.setValueAtTime(1046.50, now + 0.24);
+          gain.gain.setValueAtTime(0.2, now);
+          gain.gain.linearRampToValueAtTime(0.01, now + 0.4);
+          osc.start(now); osc.stop(now + 0.4);
         }
       } catch(e) {}
     }
 
-    function init() {
+    function init(modeKey) {
+      currentModeKey = modeKey || 'NORMAL';
+      currentLevel = 1;
       player = { x: W / 2, y: H - 100, vx: 0, vy: 0, jumpsLeft: 2, dead: false, parts: [], sinkDepth: 0 };
       cameraY = 0; score = 0;
       platforms = []; obstacles = []; particles = []; popups = []; jumpEffects = []; shakeTime = 0;
@@ -104,18 +132,37 @@
     }
 
     function addPlatform(y) {
+      let mode = MODES[currentModeKey];
+      let swampProb = mode.swampProb;
+      let bombProb = mode.bombProb;
+      let minW = mode.minW;
+      let maxW = mode.maxW;
+
+      // 泥沼モード：レベルに応じて高難易度化
+      if (currentModeKey === 'ENDLESS') {
+        bombProb = Math.min(0.25, 0.05 + currentLevel * 0.02);
+        swampProb = Math.min(0.40, 0.18 + currentLevel * 0.025);
+        minW = Math.max(45, 85 - currentLevel * 4);
+        maxW = Math.max(70, 120 - currentLevel * 5);
+      }
+
       let rand = Math.random();
       let type = 'NORMAL';
       
-      if (rand < 0.35) type = 'NORMAL';
-      else if (rand < 0.60) type = 'SWAMP'; // 沼足場（乗ると沈む）
-      else if (rand < 0.75) type = 'MOVING';
-      else if (rand < 0.88) type = 'DISAPPEAR';
-      else type = 'BOMB';
+      const bombThresh = bombProb;
+      const swampThresh = bombThresh + swampProb;
+      const movingThresh = swampThresh + 0.15;
+      const disappearThresh = movingThresh + 0.12;
 
-      const w = 85 + Math.random() * 35;
+      if (rand < bombThresh) type = 'BOMB';
+      else if (rand < swampThresh) type = 'SWAMP';
+      else if (rand < movingThresh) type = 'MOVING';
+      else if (rand < disappearThresh) type = 'DISAPPEAR';
+      else type = 'NORMAL';
+
+      const w = minW + Math.random() * (maxW - minW);
       const x = Math.random() * (W - w);
-      const vx = (type === 'MOVING') ? (Math.random() > 0.5 ? 1.8 : -1.8) : 0;
+      const vx = (type === 'MOVING') ? (Math.random() > 0.5 ? (1.8 + currentLevel * 0.1) : -(1.8 + currentLevel * 0.1)) : 0;
       
       let text = 'SAFE!';
       if (type === 'SWAMP') text = '⚠️ 沼';
@@ -151,6 +198,22 @@
       ];
     }
 
+    function gameClear() {
+      if (state === 'CLEAR') return;
+      state = 'CLEAR';
+      playSound('clear');
+      for (let i = 0; i < 60; i++) {
+        particles.push({
+          x: W / 2, y: H / 2,
+          vx: (Math.random() - 0.5) * 14,
+          vy: (Math.random() - 0.5) * 14,
+          size: Math.random() * 8 + 4,
+          color: ['#ffeb3b', '#4caf50', '#00bcd4', '#e91e63'][Math.floor(Math.random() * 4)],
+          life: 60
+        });
+      }
+    }
+
     function update() {
       if (shakeTime > 0) shakeTime--;
 
@@ -168,7 +231,55 @@
           cameraY -= diff;
           score = Math.floor(-cameraY);
           if (score > highScore) highScore = score;
+
+          // 泥沼モードのレベルアップ処理 (500mごと)
+          if (currentModeKey === 'ENDLESS') {
+            let calculatedLevel = Math.floor(score / 500) + 1;
+            if (calculatedLevel > currentLevel) {
+              currentLevel = calculatedLevel;
+              playSound('levelup');
+              popups.push({ x: W / 2, y: cameraY + H * 0.3, text: `🔥 LEVEL UP! Lv.${currentLevel}`, life: 50, vy: -1.5, color: '#ffeb3b' });
+            }
+          }
+
+          // クリア判定（クリア制モードのみ）
+          const mode = MODES[currentModeKey];
+          if (mode.target !== Infinity && score >= mode.target) {
+            gameClear();
+          }
         }
+
+        // タライ（障害物）落下処理（ハード、または泥沼Lv.3以上）
+        const isHardTarai = currentModeKey === 'HARD';
+        const isEndlessTarai = (currentModeKey === 'ENDLESS' && currentLevel >= 3);
+        
+        if (isHardTarai || isEndlessTarai) {
+          let taraiChance = isHardTarai ? 0.015 : 0.008 + (currentLevel * 0.003);
+          if (Math.random() < taraiChance) {
+            obstacles.push({
+              x: Math.random() * (W - 35) + 5,
+              y: cameraY - 40,
+              vy: 4.5 + Math.random() * 2.5,
+              w: 32,
+              h: 16
+            });
+          }
+        }
+
+        // 障害物の位置更新と接触判定
+        obstacles.forEach(o => {
+          o.y += o.vy;
+          if (
+            player.x + 8 > o.x &&
+            player.x - 8 < o.x + o.w &&
+            player.y + 16 > o.y &&
+            player.y - 16 < o.y + o.h &&
+            !player.dead
+          ) {
+            killPlayer('金タライ直撃！');
+          }
+        });
+        obstacles = obstacles.filter(o => o.y < cameraY + H + 50);
 
         let minY = Math.min(...platforms.map(p => p.y));
         while (minY > cameraY - 100) {
@@ -185,7 +296,6 @@
         });
 
         // 着地・沼判定
-        let onPlatform = false;
         if (player.vy >= 0) {
           platforms.forEach(p => {
             if (
@@ -200,8 +310,6 @@
                 p.y = 99999;
                 popups.push({ x: player.x, y: player.y, text: '底が抜けた！', life: 25, vy: -1, color: '#aaa' });
               } else if (p.type === 'SWAMP') {
-                // 沼足場：急速に沈む
-                onPlatform = true;
                 p.sink += 0.8;
                 player.y = p.y + p.sink - 18;
                 player.vy = 0;
@@ -213,7 +321,6 @@
                   killPlayer('沼に呑まれた！');
                 }
               } else {
-                onPlatform = true;
                 player.y = p.y - 18;
                 player.vy = 0;
                 player.vx = 0;
@@ -287,6 +394,25 @@
         ctx.fillText(txt, p.x + p.w / 2, p.y + p.sink + 12);
       });
 
+      // 落下金タライの描画
+      obstacles.forEach(o => {
+        ctx.fillStyle = '#d1c4e9';
+        ctx.beginPath();
+        ctx.moveTo(o.x, o.y);
+        ctx.lineTo(o.x + o.w, o.y);
+        ctx.lineTo(o.x + o.w - 4, o.y + o.h);
+        ctx.lineTo(o.x + 4, o.y + o.h);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = '#7e57c2';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        
+        // タライのフチ
+        ctx.fillStyle = '#b388ff';
+        ctx.fillRect(o.x - 2, o.y, o.w + 4, 4);
+      });
+
       jumpEffects.forEach(e => {
         ctx.strokeStyle = `rgba(100, 255, 100, ${e.alpha})`;
         ctx.lineWidth = 2;
@@ -309,36 +435,87 @@
       }
 
       particles.forEach(p => { ctx.fillStyle = p.color; ctx.fillRect(p.x, p.y, p.size, p.size); });
-      popups.forEach(p => { ctx.fillStyle = p.color; ctx.font = 'bold 16px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(p.text, p.x, p.y); });
+      popups.forEach(p => { ctx.fillStyle = p.color; ctx.font = 'bold 18px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(p.text, p.x, p.y); });
 
       ctx.restore();
 
+      // UI表示
       ctx.fillStyle = '#33ff33'; ctx.font = 'bold 16px monospace'; ctx.textAlign = 'left';
       ctx.fillText(`DEPTH: ${score}m`, 15, 30);
       ctx.fillStyle = '#ffcc00'; ctx.fillText(`RECORD: ${highScore}m`, 15, 50);
 
-      if (state === 'TITLE') {
-        ctx.fillStyle = 'rgba(0,15,0,0.85)'; ctx.fillRect(0, 0, W, H);
-        ctx.fillStyle = '#33ff66'; ctx.font = 'bold 24px sans-serif'; ctx.textAlign = 'center';
-        ctx.fillText('☣️ 沼！棒人間ジャンプ', W / 2, H / 2 - 50);
-        ctx.fillStyle = '#aaa'; ctx.font = '13px sans-serif';
-        ctx.fillText('👈 左タップ：左へジャンプ', W / 2, H / 2 - 10);
-        ctx.fillText('👉 右タップ：右へジャンプ', W / 2, H / 2 + 10);
-        ctx.fillStyle = '#ff9933';
-        ctx.fillText('⚠️ 茶色の「沼足場」は乗ると沈むぞ！', W / 2, H / 2 + 40);
-        ctx.fillStyle = '#33ff66'; ctx.font = 'bold 16px sans-serif';
-        ctx.fillText('👉 タップしてスタート 👈', W / 2, H / 2 + 90);
+      if (currentModeKey === 'ENDLESS' && state === 'PLAY') {
+        ctx.fillStyle = '#ffeb3b'; ctx.font = 'bold 14px monospace';
+        ctx.fillText(`LEVEL: ${currentLevel}`, 15, 72);
       }
 
+      ctx.fillStyle = '#aaa'; ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'right';
+      ctx.fillText(MODES[currentModeKey].name, W - 15, 30);
+
+      // --- タイトル画面 ---
+      if (state === 'TITLE') {
+        ctx.fillStyle = 'rgba(0,15,0,0.92)'; ctx.fillRect(0, 0, W, H);
+        
+        ctx.fillStyle = '#33ff66'; ctx.font = 'bold 26px sans-serif'; ctx.textAlign = 'center';
+        ctx.fillText('☣️ 沼ゲーのクソゲー', W / 2, 105, W - 40);
+        
+        ctx.fillStyle = '#aaa'; ctx.font = '13px sans-serif';
+        ctx.fillText('〜 モードを選択してスタート 〜', W / 2, 135, W - 40);
+
+        // モード選択ボタンの描画
+        modeButtons.forEach(btn => {
+          const mode = MODES[btn.key];
+          const bw = 290, bh = 52;
+          const bx = (W - bw) / 2;
+          const by = btn.y;
+
+          ctx.fillStyle = '#112211';
+          ctx.fillRect(bx, by, bw, bh);
+          ctx.strokeStyle = mode.color;
+          ctx.lineWidth = 2;
+          ctx.strokeRect(bx, by, bw, bh);
+
+          ctx.fillStyle = mode.color;
+          ctx.font = 'bold 15px sans-serif';
+          ctx.fillText(mode.name, W / 2, by + 32);
+        });
+
+        ctx.fillStyle = '#ff9933'; ctx.font = '12px sans-serif';
+        ctx.fillText('⚠️ 泥沼モードは500mごとにレベルアップ！', W / 2, 535, W - 40);
+        ctx.fillText('⚠️ ハード/高Lv泥沼は上からの「金タライ」に注意！', W / 2, 555, W - 40);
+        ctx.fillStyle = '#888';
+        ctx.fillText('👈 左タップ: 左ジャン / 👉 右タップ: 右ジャン', W / 2, 590, W - 40);
+      }
+
+      // --- クリア画面 ---
+      if (state === 'CLEAR') {
+        ctx.fillStyle = 'rgba(0,30,0,0.88)'; ctx.fillRect(0, 0, W, H);
+        ctx.fillStyle = '#ffeb3b'; ctx.font = 'bold 30px sans-serif'; ctx.textAlign = 'center';
+        ctx.fillText('🎉 CLEAR! 🎉', W / 2, H / 2 - 50);
+        
+        ctx.fillStyle = '#fff'; ctx.font = '16px sans-serif';
+        ctx.fillText(`${MODES[currentModeKey].name} 達成！`, W / 2, H / 2);
+        ctx.fillText(`記録: ${score}m`, W / 2, H / 2 + 30);
+
+        ctx.fillStyle = '#33ff66'; ctx.font = 'bold 15px sans-serif';
+        ctx.fillText('タップしてメニューに戻る', W / 2, H / 2 + 85);
+      }
+
+      // --- ゲームオーバー画面 ---
       if (state === 'GAMEOVER') {
-        ctx.fillStyle = 'rgba(15,0,0,0.8)'; ctx.fillRect(0, 0, W, H);
+        ctx.fillStyle = 'rgba(15,0,0,0.85)'; ctx.fillRect(0, 0, W, H);
         ctx.fillStyle = '#ff3333'; ctx.font = 'bold 28px sans-serif'; ctx.textAlign = 'center';
-        ctx.fillText('💀 沼没・死亡！', W / 2, H / 2 - 40);
+        ctx.fillText('💀 死亡！', W / 2, H / 2 - 40);
         ctx.fillStyle = '#fff'; ctx.font = '16px sans-serif';
         ctx.fillText(`到達深さ: ${score}m`, W / 2, H / 2 + 5);
+        if (currentModeKey === 'ENDLESS') {
+          ctx.fillStyle = '#ffeb3b'; ctx.font = '14px sans-serif';
+          ctx.fillText(`到達レベル: Lv.${currentLevel}`, W / 2, H / 2 + 30);
+        }
         ctx.fillStyle = '#aaa'; ctx.font = '13px sans-serif';
-        ctx.fillText('タップしてリトライ', W / 2, H / 2 + 45);
+        ctx.fillText('タップしてメニューに戻る', W / 2, H / 2 + 65);
       }
+
       ctx.restore();
     }
 
@@ -348,19 +525,41 @@
       if (e) e.preventDefault();
       
       const rect = canvas.getBoundingClientRect();
+      const scaleX = W / rect.width;
+      const scaleY = H / rect.height;
+
       let clientX = rect.width / 2;
-      
+      let clientY = rect.height / 2;
+
       if (e.touches && e.touches.length > 0) {
         clientX = e.touches[0].clientX - rect.left;
+        clientY = e.touches[0].clientY - rect.top;
       } else if (e.clientX !== undefined) {
         clientX = e.clientX - rect.left;
+        clientY = e.clientY - rect.top;
       }
 
-      const isLeft = clientX < (rect.width / 2);
+      const canvasX = clientX * scaleX;
+      const canvasY = clientY * scaleY;
 
-      if (state === 'TITLE' || state === 'GAMEOVER') { 
-        state = 'PLAY'; init(); 
+      if (state === 'TITLE') {
+        modeButtons.forEach(btn => {
+          const bw = 290, bh = 52;
+          const bx = (W - bw) / 2;
+          const by = btn.y;
+
+          if (
+            canvasX >= bx && canvasX <= bx + bw &&
+            canvasY >= by && canvasY <= by + bh
+          ) {
+            init(btn.key);
+            state = 'PLAY';
+          }
+        });
+      } else if (state === 'GAMEOVER' || state === 'CLEAR') { 
+        state = 'TITLE';
       } else if (state === 'PLAY') {
+        const isLeft = canvasX < (W / 2);
         if (player.jumpsLeft > 0) {
           player.vy = -8.8;
           player.vx = isLeft ? -4.2 : 4.2;
@@ -377,7 +576,7 @@
 
     window.addEventListener('touchstart', handleInput, { passive: false });
     window.addEventListener('mousedown', handleInput);
-    init(); state = 'TITLE'; loop();
+    init('NORMAL'); state = 'TITLE'; loop();
   </script>
 </body>
 </html>
